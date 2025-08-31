@@ -1,147 +1,201 @@
-<!DOCTYPE html>
-<html lang='en'>
+<!doctype html>
+<html lang="en">
 <head>
-  <meta charset='UTF-8'>
-  <meta name='viewport' content='width=device-width,initial-scale=1.0'>
-  <title>Crane Slope Safety Calculator</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crane Slope Safety — Backbone</title>
   <style>
-    *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
-    body{margin:0;padding:2rem;background:#f5f7fa;color:#222}
-    h1{margin-top:0;font-size:1.8rem;text-align:center}
-    .wrapper{max-width:960px;margin:0 auto}
-    .controls,.results{display:flex;flex-wrap:wrap;gap:1rem;margin:1rem 0;padding:1rem;background:#fff;border-radius:8px;box-shadow:0 2px 4px rgba(0,0,0,.1)}
-    .controls label{flex:1 1 200px;display:flex;flex-direction:column;font-weight:600;font-size:.9rem}
-    .controls input{margin-top:.25rem;padding:.4rem;border:1px solid #bbb;border-radius:4px;font-size:1rem}
-    button{padding:.6rem 1.2rem;border:none;border-radius:4px;background:#0077ff;color:#fff;font-size:1rem;cursor:pointer;align-self:flex-end;transition:background .2s}
-    button:hover{background:#005dda}
-    .results p{margin:.25rem 0;font-size:1rem;flex:1 1 200px}
-    .results span{font-weight:700}
-    #diagram{width:100%;max-width:100%;border:1px solid #ddd;border-radius:8px;background:#e8f0ff}
-    .note{font-size:.8rem;color:#555;text-align:center;margin-top:1rem}
+    :root{
+      --bg:#0b1220; --panel:#0f1627; --muted:#8aa0c9; --line:#223153; --accent:#2b6cf6; --good:#1fc36e; --bad:#ff5d5d; --text:#e8eefc;
+      --panel-border:1px solid #1b2743; --card:#111a2c; --shadow:0 2px 10px rgba(0,0,0,.25);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    h1{margin:0;font-size:18px}
+    .wrap{max-width:1100px;margin:0 auto;padding:16px;display:grid;gap:12px;grid-template-rows:auto auto 1fr}
+    header{display:flex;align-items:center;gap:10px}
+    .brand{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);border:var(--panel-border);border-radius:12px}
+    .brand .dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}
+    .status{margin-left:auto;background:var(--panel);border:var(--panel-border);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px}
+
+    .grid{display:grid;gap:12px;grid-template-columns:320px 1fr}
+    @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+
+    .panel{background:var(--panel);border:var(--panel-border);border-radius:14px;box-shadow:var(--shadow)}
+    .panel h2{font-size:13px;margin:0 0 8px;color:var(--muted);letter-spacing:.3px}
+
+    .controls{padding:14px}
+    .row{display:grid;grid-template-columns:1fr 1fr; gap:10px}
+    .row3{display:grid;grid-template-columns:1fr 1fr 1fr; gap:10px}
+    label{display:grid;gap:6px;font-size:12px;color:var(--muted)}
+    input{background:#0c1324;border:1px solid #1c2947;border-radius:10px;padding:10px;color:var(--text);font:600 14px/1.1 inherit;outline:none}
+    input:focus{border-color:#2f4d92;box-shadow:0 0 0 3px rgba(43,108,246,.2)}
+    .btns{display:flex;gap:8px;align-items:center;margin-top:10px}
+    button{border:0;border-radius:10px;padding:10px 12px;font-weight:700;color:#fff;background:var(--accent);cursor:pointer}
+    button.secondary{background:#2a3658}
+    button.ghost{background:transparent;color:var(--muted);border:1px dashed #27406d}
+    .hint{margin-top:6px;color:var(--muted);font-size:12px}
+
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:12px}
+    @media (max-width:900px){ .cards{grid-template-columns:repeat(2,1fr)} }
+    .card{background:var(--card);border:var(--panel-border);border-radius:12px;padding:10px 12px;box-shadow:var(--shadow)}
+    .card .k{color:var(--muted);font-size:11px;margin-bottom:4px}
+    .card .v{font:700 18px/1.1 system-ui}
+    .badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:6px 10px;font-weight:700}
+    .pass{background:rgba(31,195,110,.12);color:var(--good);border:1px solid rgba(31,195,110,.35)}
+    .fail{background:rgba(255,93,93,.12);color:var(--bad);border:1px solid rgba(255,93,93,.35)}
+
+    .canvas-wrap{position:relative}
+    svg{width:100%;height:520px;display:block;background:#0e172b;border-top-left-radius:14px;border-top-right-radius:14px;border-bottom-left-radius:14px;border-bottom-right-radius:14px;border:var(--panel-border)}
+    .legend{position:absolute;left:12px;bottom:12px;background:rgba(10,15,30,.7);border:1px solid #213155;border-radius:10px;padding:6px 8px;color:var(--muted);font-size:12px}
+    .legend b{color:var(--text)}
+
+    .footer-note{color:var(--muted);font-size:12px;text-align:center;padding:6px}
   </style>
 </head>
 <body>
-  <div class='wrapper'>
-    <h1>Crane – Slope Safety Calculator</h1>
+  <div class="wrap">
+    <header>
+      <div class="brand"><span class="dot"></span><h1>Backbone — Crane Slope Safety</h1></div>
+      <span id="status" class="status">Ready</span>
+    </header>
 
-    <!-- INPUTS -->
-    <form class='controls' id='inputForm' onsubmit='event.preventDefault();calculate()'>
-      <label>
-        Foundation (Mat) Width W (m)
-        <input type='number' id='matWidth' step='0.01' min='0' value='0.9' required>
-      </label>
-      <label>
-        Horizontal Slope Length d (m)
-        <input type='number' id='slopeLength' step='0.1' min='0' value='6' required>
-      </label>
-      <label>
-        Vertical Slope Height H (m)
-        <input type='number' id='slopeHeight' step='0.1' min='0' value='4' required>
-      </label>
-      <button type='submit'>Calculate</button>
-    </form>
+    <div class="grid">
+      <section class="panel controls">
+        <h2>Inputs</h2>
+        <div class="row3">
+          <label>Foundation (mat) width W (m)
+            <input id="W" type="number" min="0" step="0.01" value="0.9" />
+          </label>
+          <label>Horizontal slope length d (m)
+            <input id="d" type="number" min="0" step="0.1" value="6" />
+          </label>
+          <label>Vertical slope height H (m)
+            <input id="H" type="number" min="0" step="0.1" value="4" />
+          </label>
+        </div>
+        <div class="btns">
+          <button id="run">Run</button>
+          <button id="example" class="secondary">Example</button>
+          <button id="download" class="ghost">Export PNG</button>
+        </div>
+        <div class="hint">Rule of thumb (BS 7121-3:2000 & CIRIA C703): D ≥ 4W and (D + d) ≥ 2H. This tool is for preliminary checks only.</div>
+      </section>
 
-    <!-- OUTPUTS -->
-    <div class='results' id='resultsBox'>
-      <p>Minimum safe distance D: <span id='outD'>–</span> m</p>
-      <p>Status (D ≥ 4W &amp; D + d ≥ 2H): <span id='outStatus'>–</span></p>
+      <section class="panel">
+        <div class="cards" id="cards">
+          <div class="card"><div class="k">Minimum safe distance D (m)</div><div class="v" id="outD">—</div></div>
+          <div class="card"><div class="k">Check 1: 4W (m)</div><div class="v" id="out4W">—</div></div>
+          <div class="card"><div class="k">Check 2: 2H (m)</div><div class="v" id="out2H">—</div></div>
+          <div class="card"><div class="k">D + d (m)</div><div class="v" id="outDd">—</div></div>
+        </div>
+        <div class="canvas-wrap">
+          <svg id="svg" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg>
+          <div class="legend">Blue <b>D</b> • Brown slope • Grey ground • Orange pad/mats</div>
+        </div>
+        <div class="footer-note">© Backbone tools — draft guidance only. Always engage a qualified engineer for site‑specific design and verification.</div>
+      </section>
     </div>
-
-    <!-- DIAGRAM -->
-    <svg id='diagram' viewBox='0 0 800 400' preserveAspectRatio='xMidYMid meet'></svg>
-
-    <p class='note'>Calculated in accordance with BS 7121‑3:2000 &amp; CIRIA C703. For preliminary guidance only – always consult a qualified engineer on site‑specific conditions.</p>
   </div>
 
-<script>
-(function(){
+  <script>
   const svgNS = 'http://www.w3.org/2000/svg';
+  const $ = id => document.getElementById(id);
+  const status = (t)=> $('status').textContent = t;
 
-  function createLine(x1,y1,x2,y2,opts={}){
-    const l=document.createElementNS(svgNS,'line');
-    l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);
-    l.setAttribute('stroke',opts.stroke||'black');
-    l.setAttribute('stroke-width',opts.sw||2);
-    if(opts.dash) l.setAttribute('stroke-dasharray',opts.dash);
-    return l;
+  function line(x1,y1,x2,y2,cls, dash){ const l=document.createElementNS(svgNS,'line'); l.setAttribute('x1',x1); l.setAttribute('y1',y1); l.setAttribute('x2',x2); l.setAttribute('y2',y2); l.setAttribute('stroke',cls||'#7b8db8'); l.setAttribute('stroke-width','2'); if(dash) l.setAttribute('stroke-dasharray',dash); return l; }
+  function rect(x,y,w,h,fill='#ffb85c',stroke='#a16a1f'){ const r=document.createElementNS(svgNS,'rect'); r.setAttribute('x',x); r.setAttribute('y',y); r.setAttribute('width',w); r.setAttribute('height',h); r.setAttribute('fill',fill); r.setAttribute('stroke',stroke); r.setAttribute('stroke-width','1.5'); return r; }
+  function text(t,x,y,fill='#a6b4d6',size=12,anchor='middle'){ const tx=document.createElementNS(svgNS,'text'); tx.textContent=t; tx.setAttribute('x',x); tx.setAttribute('y',y); tx.setAttribute('fill',fill); tx.setAttribute('font-size',size); tx.setAttribute('text-anchor',anchor); return tx; }
+  function clear(el){ while(el.firstChild) el.removeChild(el.firstChild); }
+
+  function compute(){
+    const W = Math.max(0, parseFloat($('W').value));
+    const d = Math.max(0, parseFloat($('d').value));
+    const H = Math.max(0, parseFloat($('H').value));
+
+    const fourW = 4*W;            // from BS 7121-3 / CIRIA guidance (>= 4x foundation width)
+    const needFromSlope = Math.max(0, 2*H - d); // ensure D + d >= 2H
+    const D = Math.max(fourW, needFromSlope);
+    const pass = (D >= fourW) && (D + d >= 2*H);
+
+    $('outD').textContent = D.toFixed(2);
+    $('out4W').textContent = fourW.toFixed(2);
+    $('out2H').textContent = (2*H).toFixed(2);
+    $('outDd').textContent = (D + d).toFixed(2);
+
+    // Status badge
+    const statusBadge = pass ? '<span class="badge pass">PASS</span>' : '<span class="badge fail">FAIL</span>';
+    $('outD').parentElement.querySelector('.k').innerHTML = 'Minimum safe distance D (m) ' + statusBadge;
+
+    draw(W, d, H, D);
+    status('Ready');
   }
 
-  function createRect(x,y,w,h,opts={}){
-    const r=document.createElementNS(svgNS,'rect');
-    r.setAttribute('x',x);r.setAttribute('y',y);r.setAttribute('width',w);r.setAttribute('height',h);
-    r.setAttribute('fill',opts.fill||'orange');
-    r.setAttribute('stroke',opts.stroke||'black');
-    return r;
+  function draw(W,d,H,D){
+    const svg = $('svg');
+    clear(svg);
+    const px = 60; // pixels per metre default
+
+    // Auto-fit scale to viewbox while keeping margins
+    const usableW = 900; const usableH = 420; const marginL = 80; const marginB = 380;
+    const totalLen = D + d + 6; // some free space in front
+    const totalH = H + 2;       // free space below/above
+    const sx = Math.max(30, Math.min(100, Math.floor(usableW / Math.max(1,totalLen))));
+    const sy = Math.max(30, Math.min(100, Math.floor(usableH / Math.max(1,totalH))));
+    const scale = Math.min(sx, sy);
+
+    const baseY = marginB; // ground elevation left of slope
+    const padW = Math.max(0.6, W) * scale; // draw at least 0.6m visually
+    const padH = 16;
+    const padX = marginL;
+
+    // Crane pad / mats and a tiny mast/boom glyph
+    svg.appendChild(rect(padX, baseY-padH, padW, padH, '#ffb85c', '#b47428'));
+    svg.appendChild(rect(padX + padW*0.45, baseY-padH-60, padW*0.10, 60, '#44506b', '#2a3658'));
+    svg.appendChild(line(padX + padW*0.50, baseY-padH-60, padX + padW*0.50 + 150, baseY-padH-160, '#7ea6ff', ''));
+
+    // D (blue dashed)
+    const Dpx = D * scale;
+    svg.appendChild(line(padX + padW, baseY, padX + padW + Dpx, baseY, '#2b6cf6', '6 6'));
+    svg.appendChild(text(`D = ${D.toFixed(2)} m`, padX + padW + Dpx/2, baseY - 8, '#9fb3d8', 12));
+
+    // Slope and ground
+    const startX = padX + padW + Dpx;
+    const endX = startX + d*scale;
+    const endY = baseY + H*scale;
+    svg.appendChild(line(0, baseY, padX-10, baseY, '#5b6b8f')); // left ground
+    svg.appendChild(line(startX, baseY, endX, endY, '#8b6b4e')); // slope (brown)
+    svg.appendChild(line(endX, endY, endX + 140, endY, '#5b6b8f')); // right ground
+
+    // d & H dims
+    svg.appendChild(text(`d = ${d.toFixed(2)} m`, startX + (endX-startX)/2, baseY + 16, '#9fb3d8'));
+    svg.appendChild(text(`H = ${H.toFixed(2)} m`, endX + 16, baseY + (endY-baseY)/2, '#9fb3d8', 12, 'start'));
   }
 
-  function clearChildren(el){ while(el.firstChild) el.removeChild(el.firstChild); }
-
-  window.calculate = function(){
-    const W=parseFloat(document.getElementById('matWidth').value);
-    const d=parseFloat(document.getElementById('slopeLength').value);
-    const H=parseFloat(document.getElementById('slopeHeight').value);
-    if([W,d,H].some(v=>isNaN(v)||v<0)) return;
-
-    const D1=4*W;
-    const D2=Math.max(0,2*H - d);
-    const D= Math.max(D1,D2);
-
-    // Update outputs
-    document.getElementById('outD').textContent = D.toFixed(2);
-    const pass = (D>=D1) && (D + d >= 2*H);
-    document.getElementById('outStatus').textContent = pass ? 'PASS' : 'FAIL';
-    document.getElementById('outStatus').style.color = pass ? 'green' : 'red';
-
-    // Update diagram
-    drawDiagram(W,d,H,D);
-  };
-
-  function drawDiagram(W,d,H,D){
-    const svg=document.getElementById('diagram');
-    clearChildren(svg);
-
-    const scale=40; // pixels per metre
-    const groundY=300;
-    const originX=50; // left margin
-
-    // Crane pad & crane simple representation
-    const padWidth=W*scale;
-    const padX=originX;
-    const padY=groundY-20;
-    svg.appendChild(createRect(padX,padY,padWidth,20,{fill:'#ffd580'}));
-    svg.appendChild(createRect(padX+padWidth/2-10,padY-60,20,60,{fill:'#666'})); // mast
-    svg.appendChild(createLine(padX+padWidth/2-10,padY-60,padX+padWidth/2+120,padY-160,{sw:4})); // boom
-
-    // Danger distance D indicator
-    const Dpx=D*scale;
-    svg.appendChild(createLine(padX+padWidth,groundY,padX+padWidth+Dpx,groundY,{stroke:'#00f',dash:'4 4'}));
-
-    // Slope line
-    const slopeStartX=padX+padWidth+Dpx;
-    const slopeEndX=slopeStartX+d*scale;
-    const slopeEndY=groundY+H*scale;
-    svg.appendChild(createLine(slopeStartX,groundY,slopeEndX,slopeEndY,{stroke:'#964B00'}));
-
-    // Ground lines
-    svg.appendChild(createLine(0,groundY,originX-5,groundY)); // left ground
-    svg.appendChild(createLine(slopeEndX, slopeEndY, slopeEndX+100, slopeEndY)); // right ground
-
-    // Labels (simple)
-    addText(`D = ${D.toFixed(2)} m`, padX+padWidth + Dpx/2, groundY - 6);
-    addText('d', slopeStartX + (slopeEndX-slopeStartX)/2, groundY + 14);
-    addText('H', slopeEndX + 14, groundY + (slopeEndY-groundY)/2);
-
-    function addText(t,x,y){
-      const txt=document.createElementNS(svgNS,'text');
-      txt.setAttribute('x',x);txt.setAttribute('y',y);
-      txt.setAttribute('font-size','12');
-      txt.setAttribute('text-anchor','middle');
-      txt.textContent=t;svg.appendChild(txt);}
+  function exportPNG(){
+    const svg = $('svg');
+    const xml = new XMLSerializer().serializeToString(svg);
+    const svg64 = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(xml);
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      canvas.width = svg.viewBox.baseVal.width; canvas.height = svg.viewBox.baseVal.height;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#0e172b'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.drawImage(img, 0,0);
+      const a = document.createElement('a'); a.download = 'crane_slope_safety.png'; a.href = canvas.toDataURL('image/png'); a.click();
+    };
+    img.src = svg64;
   }
 
-  // Initial calculation on load
-  calculate();
-})();
-</script>
+  // Bind
+  $('run').addEventListener('click', compute);
+  $('example').addEventListener('click', ()=>{ $('W').value=0.9; $('d').value=6; $('H').value=4; compute(); });
+  $('download').addEventListener('click', exportPNG);
+
+  // First render
+  compute();
+  </script>
 </body>
 </html>
